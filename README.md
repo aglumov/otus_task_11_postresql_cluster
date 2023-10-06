@@ -22,3 +22,5 @@
 При успешном выполнении плейбука в выводе terraform взять ip-адрес из ```nginx_public_ip_address``` и подключиться по http. Grafana будет доступна по основному локейшену ```/```, статистика HAProxy по локейшену ```/haproxy```.
 
 # Схема проекта
+
+![Project scheme](img/scheme.png "Project scheme")
