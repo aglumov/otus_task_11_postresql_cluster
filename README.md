@@ -1,6 +1,7 @@
 # Задание
 
 Развернуть и настроить веб приложение, использующее PostgreSQL. Настроить кластер PostgreSQL patroni, etcd/consul/zookeeper и haproxy/pgbouncer.
+В качестве веб приложения была выбрана Grafana.
 
 # Подготовка к запуску
 
