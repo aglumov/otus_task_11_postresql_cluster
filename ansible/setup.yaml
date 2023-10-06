@@ -1,0 +1,89 @@
+---
+- name: Install and configure Loadbalancer, Web application and Database
+  hosts: all
+  become: true
+
+  vars:
+    postgresql_version: "15"
+    etcd_version: "v3.4.27"
+    db_packages:
+    - "postgresql-{{ postgresql_version }}"
+    - "python3-psycopg2"
+    - "python3-pip"
+    lb_packages:
+    - "nginx"
+    app_packages:
+    - "haproxy"
+    - "adduser"
+    - "libfontconfig1"
+    - "musl"
+    - "postgresql-client-{{ postgresql_version }}"
+    - "python3-psycopg2"
+    db_name: "grafana"
+    db_user: "grafana"
+    db_pass: "grafanapassword"
+
+
+  tasks:
+  - name: All | Disable auto updates on Ubuntu
+    ansible.builtin.copy:
+      dest: /etc/apt/apt.conf.d/20auto-upgrades
+      content: |
+        APT::Periodic::Update-Package-Lists "0";
+        APT::Periodic::Unattended-Upgrade "0";
+    when: ansible_distribution == 'Ubuntu'
+
+  - name: All | Set hostname
+    ansible.builtin.hostname:
+      name: "{{ inventory_hostname }}"
+      use: "systemd"
+
+  - name: ETCD | Install and Configure ETCD
+    include_tasks: "etcd.yaml"
+    when: inventory_hostname in groups["db"]
+
+  - name: Database | Install Postgresql + Patroni
+    include_tasks: "postgresql.yaml"
+    when: inventory_hostname in groups["db"]
+
+  - name: Grafana | Install and configure Grafana
+    include_tasks: "grafana.yaml"
+    when: inventory_hostname in groups["app"]
+    tags: grafana
+
+  - name: Loadbalancer | Install and configure Nginx
+    include_tasks: "lb.yaml"
+    when: inventory_hostname in groups["lb"]
+
+  handlers:
+  - name: reload nginx
+    ansible.builtin.systemd:
+      name: "nginx"
+      state: reloaded
+
+  - name: reload postgresql
+    ansible.builtin.systemd:
+      name: "postgresql"
+      state: "reloaded"
+
+  - name: restart postgresql
+    ansible.builtin.systemd:
+      name: "postgresql"
+      state: "restarted"
+
+  - name: restart haproxy
+    ansible.builtin.systemd:
+      name: haproxy
+      state: restarted
+
+  - name: restart etcd
+    ansible.builtin.systemd:
+      name: etcd
+      state: restarted
+      daemon_reload: true
+
+  - name: restart grafana
+    ansible.builtin.systemd:
+      name: grafana-server
+      state: restarted
+      daemon_reload: true

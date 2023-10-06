@@ -1,0 +1,51 @@
+- name: "Database | Install Postgres repo"
+  ansible.builtin.copy:
+    dest: "/etc/apt/sources.list.d/pgdg.list"
+    content: "deb http://apt.postgresql.org/pub/repos/apt {{ ansible_distribution_release }}-pgdg main"
+      
+- name: "Database | Import Postgres Repo Key"
+  ansible.builtin.apt_key:
+    url: "https://www.postgresql.org/media/keys/ACCC4CF8.asc"
+
+- name: "Database | Install DB packages"
+  ansible.builtin.apt:
+    name: "{{ db_packages }}"
+    state: "latest"
+    update_cache: true
+
+- name: "Database | Stop postgresql"
+  ansible.builtin.systemd:
+    name: postgresql
+    state: stopped
+
+- name: "Database | Install Patroni[etcd] via pip"
+  ansible.builtin.pip:
+    name: "patroni[etcd]"
+    state: present
+
+- name: "Database | Create directory for Patroni"
+  ansible.builtin.file:
+    path: /etc/patroni
+    state: directory
+    mode: "0755"
+    owner: "postgres"
+    group: "postgres"
+
+- name: Database | Configure Patroni
+  ansible.builtin.template:
+    src: "templates/patroni.yml.j2"
+    dest: /etc/patroni/patroni.yml
+    mode: "0600"
+    owner: "postgres"
+    group: "postgres"
+
+- name: Database | Create systemd unit for Patroni
+  ansible.builtin.copy:
+    src: "files/patroni.service"
+    dest: "/etc/systemd/system/patroni.service"
+
+- name: Database | Start Patroni
+  ansible.builtin.systemd:
+    name: patroni
+    state: started
+    daemon_reload: true

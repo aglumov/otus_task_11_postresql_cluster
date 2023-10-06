@@ -1,0 +1,28 @@
+global 
+    maxconn 100 
+        defaults 
+            log     global 
+            mode    tcp 
+            retries 2 
+            timeout client 30m 
+            timeout connect 4s 
+            timeout server 30m 
+            timeout check 5s 
+
+        listen stats
+            mode http
+            bind *:32700
+            stats enable
+            stats uri /
+ 
+        frontend frontend_psql 
+            bind *:5432
+            mode tcp
+            default_backend backend_psql 
+ 
+        backend backend_psql
+            option httpchk
+            mode tcp
+            {% for i in groups.db -%}            
+            server {{ hostvars[i].ansible_hostname }} {{ hostvars[i].ansible_host }}:5432 maxconn 1000 check port 8008
+            {% endfor +%}

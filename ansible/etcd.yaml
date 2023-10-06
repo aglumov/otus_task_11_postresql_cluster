@@ -1,0 +1,39 @@
+- name: ETCD | Download and extract etcd
+  ansible.builtin.unarchive:
+    src: "https://github.com/etcd-io/etcd/releases/download/{{ etcd_version }}/etcd-{{ etcd_version }}-linux-amd64.tar.gz"
+    dest: "/tmp"
+    remote_src: true
+    
+- name: ETCD | Copy etcd binaries to /usr/local/bin
+  ansible.builtin.copy:
+    src: "/tmp/etcd-{{ etcd_version }}-linux-amd64/{{ item }}"
+    dest: "/usr/local/bin/{{ item }}"
+    mode: "0755"
+    remote_src: true
+  loop:
+  - etcd
+  - etcdctl
+
+- name: ETCD | Make work directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+  loop:
+  - /var/lib/etcd
+  - /var/lib/etcd/wal
+
+- name: ETCD | Configure etcd
+  ansible.builtin.template:
+    src: "templates/etcd.conf.j2"
+    dest: "/etc/etcd.conf"
+    mode: "0644"
+  notify: restart etcd
+
+- name: ETCD | Configure systemd unit for etcd
+  ansible.builtin.copy:
+    src: "files/etcd.service"
+    dest: "/etc/systemd/system/etcd.service"
+  notify: restart etcd
+
+- name: ETCD | Restart etcd if something has changed
+  ansible.builtin.meta: flush_handlers
