@@ -20,7 +20,7 @@
 
 - name: "Database | Install Patroni[etcd] via pip"
   ansible.builtin.pip:
-    name: "patroni[etcd]"
+    name: "patroni[etcd]==3.1.2"
     state: present
 
 - name: "Database | Create directory for Patroni"
